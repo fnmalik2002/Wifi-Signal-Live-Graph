@@ -172,8 +172,17 @@ class MyGraphGUI(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, parent=None, title="Graph Window", size=(800, 700))
         top = Top_panel(self)
-        # wx.Yield()
-        # top.start(event=wx.EVT_BUTTON)
+
+        # attach the key bind event to accelerator table (to use cmd+q keys to close app)
+        randomId = wx.Window.NewControlId()
+        
+        self.Bind(wx.EVT_MENU, self.onkeycombo, id=randomId)
+        accel_tbl = wx.AcceleratorTable([(wx.ACCEL_CTRL, ord('q'), randomId)])
+        self.SetAcceleratorTable(accel_tbl)
+
+    def onkeycombo(self, event):
+        # print "You pressed CTRL+Q!"
+        self.Destroy()
 
 
 if __name__ == '__main__':
