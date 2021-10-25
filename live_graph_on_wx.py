@@ -9,6 +9,7 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import style
 import sqlite3
+import pandas as pd
 
 
 def update_database(rssi_value, noise_value):
@@ -45,7 +46,7 @@ class Top_panel(wx.Panel):
     n = 0
     rssi = []
     noise = []
-    strn = []
+    avg = []
     stop = 0
 
     def __init__(self, parent):
@@ -67,12 +68,18 @@ class Top_panel(wx.Panel):
         self.empty_txt.SetFont(font)
 
         self.canvas = FigureCanvas(self, -1, self.figure)
+        self.slider_text = wx.StaticText(self, -1, "Select reading interval (s)")
+
+        self.slider = wx.Slider(self, 1, 1, 1, 10, pos=(10, 10), size=(250, -1),
+                           style=wx.SL_HORIZONTAL | wx.SL_AUTOTICKS | wx.SL_LABELS)
+        # slider.SetTickFreq(5, 1)
+        print("slider value", self.slider.GetValue())
 
         self.btn = wx.Button(self, -1, label="Start")
         self.btn.Bind(wx.EVT_BUTTON, self.start)
 
-        # self.btn2 = wx.Button(self, -1, label="Stop")
-        # self.btn2.Bind(wx.EVT_BUTTON, self.stop_animation)
+        self.btn2 = wx.Button(self, -1, label="Quit")
+        self.btn2.Bind(wx.EVT_BUTTON, self.do_quit)
         # self.btn.Bind(wx.EVT_BUTTON, self.do)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -82,10 +89,17 @@ class Top_panel(wx.Panel):
 
         self.sizer2.Add(self.empty_txt, 1, wx.ALIGN_CENTER_VERTICAL, 0)
         self.sizer.Add(self.canvas, 3, wx.ALIGN_CENTER)
-        self.sizer3.Add(self.btn, 1, wx.ALIGN_CENTER | wx.RIGHT, 0)
-        # self.sizer3.Add(self.btn2, 1, wx.ALIGN_CENTER)
+
+        self.sizer3.Add(self.slider_text, 0, wx.ALIGN_CENTER | wx.RIGHT, 0)
+
+        self.sizer3.Add(self.slider, 0, wx.ALIGN_CENTER | wx.RIGHT, 0)
+        self.sizer3.Add(self.btn, 0, wx.ALIGN_CENTER | wx.RIGHT, 10)
+        self.sizer3.Add(self.btn2, 1, wx.ALIGN_CENTER)
         self.sizer.Add(self.sizer3, 1, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 0)
         self.SetSizer(self.sizer)
+
+    def do_quit(self, event):
+        self.Parent.Destroy()
 
     def do(self, event):
         """method created for testing database insert function"""
@@ -105,31 +119,43 @@ class Top_panel(wx.Panel):
         update_database(sig_value, noise_value)
         self.rssi.append(sig_value)
         self.noise.append(noise_value)
-        self.strn.append(sig_value - noise_value)
-        # print(self.strn)
+        noise_pd = pd.DataFrame(self.noise)
+        print("mean", noise_pd.mean(axis=0))
+
+        if len(self.avg) != 0:
+            self.avg.append((self.avg[-1] + noise_value)/2)
+        else:
+            self.avg.append(noise_value)
+        # print(self.avg)
         # print("Signal \n", self.rssi, "\nNoise \n", self.noise)
         self.axes.clear()
         # self.axes2.clear()
-        self.axes.plot(self.rssi, 'b', label='Signal')
+        self.axes.plot(self.rssi, 'g', label='Signal')
         self.axes.plot(self.noise, 'r', label='Noise')
-        # self.axes.plot(self.strn, 'g')
+        # self.axes.plot(noise_pd.mean(axis=0), 'b-', label='Mean Noise')
         self.axes.set_ylabel('Signal Strength (% of Max)')
-        self.axes.set_xlabel('Time interval (s)')
-        self.axes.set_yticks([0,20, 40,60,80,100])
+        self.axes.set_xlabel('Reading Number')
+        self.axes.set_yticks([0,20,40,60,80,100])
         self.axes.legend()
+        # self.axes.fill_between(self.noise,self.rssi,0, interpolate=True, color='cyan')
         self.figure.canvas.draw()
 
         self.figure.tight_layout()
 
-    def start(self, event, interval = 1):
+    def start(self, event):
+        intrvl = self.slider.GetValue()
 
         if self.btn.GetLabel() != "Stop":
             self.btn.SetLabel("Stop")
+            self.slider.Disable()
+            self.btn2.Disable()
 
             self.stop = 0
         else:
             self.btn.SetLabel("Start")
             self.stop = 1
+            self.slider.Enable()
+            self.btn2.Enable()
         # self.btn.SetFocus()
 
         i = 0
@@ -137,7 +163,7 @@ class Top_panel(wx.Panel):
             self.animate(i, event)
             i += 1
             wx.Yield()
-            time.sleep(interval)
+            time.sleep(intrvl)
 
     def stop_animation(self, event):
         self.stop = 1
