@@ -175,7 +175,7 @@ class MyGraphGUI(wx.Frame):
 
         # attach the key bind event to accelerator table (to use cmd+q keys to close app)
         randomId = wx.Window.NewControlId()
-        
+
         self.Bind(wx.EVT_MENU, self.onkeycombo, id=randomId)
         accel_tbl = wx.AcceleratorTable([(wx.ACCEL_CTRL, ord('q'), randomId)])
         self.SetAcceleratorTable(accel_tbl)
